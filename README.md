@@ -2,6 +2,8 @@
 
 This project has 2 components, a consumer project and a service provider as an Express API.
 
+_NOTE: Each step is tied to, and must be run within, a git branch, allowing you to progress through each stage incrementally. For example, to move to step 2 run the following: `git checkout step2`_
+
 ## Step 1 - Simple Consumer calling Provider
 
 Given we have a client that needs to make a HTTP GET request to a provider service, and requires a response in JSON format.
@@ -10,32 +12,30 @@ Given we have a client that needs to make a HTTP GET request to a provider servi
 
 The consumer client is quite simple and looks like this
 
-*consumer/consumer.js:*
+_consumer/consumer.js:_
 
 ```js
 request
   .get(`${API_ENDPOINT}/provider`)
-  .query({validDate: new Date().toISOString()})
-  .then((res) => {
+  .query({ validDate: new Date().toISOString() })
+  .then(res => {
     console.log(res.body)
   })
 ```
 
 and the express provider resource
 
-*provider/provider.js:*
+_provider/provider.js:_
 
 ```js
 server.get('/provider/:', (req, res) => {
   const date = req.query.validDate
 
-  res.json(
-    {
-      'test': 'NO',
-      'validDate': new Date().toISOString(),
-      'count': 100
-    }
-  )
+  res.json({
+    test: 'NO',
+    validDate: new Date().toISOString(),
+    count: 100,
+  })
 })
 ```
 
@@ -180,7 +180,6 @@ describe('Pact with Our Provider', () => {
         return provider.setup()
           .then(() => {
             provider.addInteraction({
-              state: 'data count > 0',
               uponReceiving: 'a request for JSON data',
               withRequest: {
                 method: 'GET',
@@ -224,8 +223,8 @@ describe('Pact with Our Provider', () => {
 ![Test using Pact](diagrams/step3_pact.png)
 
 
-This test starts a mock server on port 9123 that pretends to be our provider. To get this to work we needed to update
-our consumer to pass in the URL of the provider. We also updated the `fetchAndProcessData` method to pass in the
+This test starts a mock server on port 1234 that pretends to be our provider. To get this to work we needed to update
+our consumer to pass in the URL of the provider. We also updated the `fetchProviderData` method to pass in the
 query parameter.
 
 Running this spec still passes, but it creates a pact file which we can use to validate our assumptions on the provider side.
@@ -345,6 +344,12 @@ Failures:
 The test has failed for 2 reasons. Firstly, the count field has a different value to what was expected by the consumer.
 
 Secondly, and more importantly, the consumer was expecting a `date` field while the provider generates a `validDate` field. Also, the date formats are different.
+
+_NOTE_: We have separated the API provider into two components: one that provides a testable API and the other to start the actual service for local testing. You should now start the provider as follows:
+
+```sh
+node provider/providerService.js
+```
 
 # Step 5
 
@@ -507,7 +512,7 @@ Here are the two additional tests:
 
 *consumer/test/consumerPact.spec.js:*
 
-```groovy
+```js
 describe('and an invalid date is provided', () => {
   before(() => {
     return provider.addInteraction({
@@ -1042,7 +1047,7 @@ All we need to do for the provider is update where it finds its pacts from local
 
 ```js
 let opts = {
-  provider: 'Our%20Provider',
+  provider: 'Our Provider',
   providerBaseUrl: 'http://localhost:8081',
   providerStatesUrl: 'http://localhost:8081/states',
   providerStatesSetupUrl: 'http://localhost:8081/setup',
@@ -1069,8 +1074,15 @@ If something has changed, or it hasn't yet been validated by all downstream prov
 
 Here is a simple cURL that will tell you if it's safe to release Our Little Consumer:
 
+```sh
+curl -s -u dXfltyFMgNOFZAxr8io9wJ37iUpY42M:O5AIZWxelWbLvqMd8PkAVycBJh2Psyg1 "https://test.pact.dius.com.au/verification-results/consumer/Our%20Little%20Consumer/version/1.0.${USER}/latest" | jq .success
 ```
-$ curl -s -u dXfltyFMgNOFZAxr8io9wJ37iUpY42M:O5AIZWxelWbLvqMd8PkAVycBJh2Psyg1 https://test.pact.dius.com.au/verification-results/consumer/Our%20Little%20Consumer/version/1.0.0/latest | jq .success
+
+Or better yet, you can use our [CLI Tools](https://github.com/pact-foundation/pact-ruby-standalone/releases) to do the job, which are bundled as part of Pact JS:
+
+```sh
+npm run can-i-deploy:consumer
+npm run can-i-deploy:provider
 ```
 
 That's it - you're now a Pact pro!
